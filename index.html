@@ -1,0 +1,410 @@
+<html xmlns:v-on="http://www.w3.org/1999/xhtml" xmlns:v-bind="http://www.w3.org/1999/xhtml">
+    <head>
+        <meta charset="UTF-8">
+        <title>Game</title>
+        <script src="vue.js"></script>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css" integrity="sha384-B4dIYHKNBt8Bc12p+WXckhzcICo0wtJAoU8YZTY5qE0Id1GSseTk6S+L3BlXeVIU" crossorigin="anonymous">
+    </head>
+    <body>
+        <style>
+            .level{
+                height: 400px;
+            }
+
+            .btn{
+                font-size: 2rem !important;
+            }
+
+            .actions-content{
+                position: fixed;
+                bottom: 0px;
+                left: 0px;
+                width: 100%;
+                padding: 20px;
+                background-color: #eeeeee;
+                z-index: 10;
+            }
+
+            .progressbar-play{
+                transition: 1s linear all;
+            }
+        </style>
+
+        <div id="app">
+            <div class="container">
+                <div class="text-center mt-3">
+                    <h1 class="text-center">Game</h1>
+
+                    <div class="row">
+                        <ul class="nav nav-pills nav-fill m-2">
+                            <li class="nav-item" @click="page = 1">
+                                <a class="nav-link  " :class="{active : page == 1}" href="#">My account</a>
+                            </li>
+                            <li class="nav-item" @click="page = 2">
+                                <a class="nav-link" href="#" :class="{active : page == 2}">Party</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="col-sm-10 offset-sm-1 p-5" style="background-color: #f2f2f2;" v-if="page == 1">
+                    <div class="form-group w-50 m-auto">
+                        <label for="namePlayer">Name</label>
+                        <input v-model="player.name" type="text" class="form-control" id="namePlayer" placeholder="Name Player">
+                    </div>
+
+                    <div>
+                        <p>Level : {{ player.level }}</p>
+                        <p>Attack : {{ player.minAttack }}-{{ player.maxAttack}} damages</p>
+                        <p>Attack Special: {{ player.minAttackSpecial }}-{{ player.maxAttackSpecial }} damages</p>
+                        <div class="progress m-auto w-75 font-weight-bold" style="height: 2rem !important;background-color: #c6c7c9;">
+                            <div class="progress-bar bg-primary" role="progressbar" :style="{width: (player.points * 100) / levelsPlayer[player.level - 1].pointsNextLevel + '%'}"
+                                 aria-valuemin="0" aria-valuemax="100">
+                                {{ player.points }} pts / {{ levelsPlayer[player.level - 1].pointsNextLevel }} pts
+                            </div>
+                        </div>
+
+                    </div>
+                    <!-- TODO -->
+                </div>
+
+                <div v-else>
+                    <div class="w-100 text-center" v-if="!isRunning">
+                        <div class="card-deck">
+                            <div v-for="level in levels"  class="card">
+                                <div class="card-header">
+                                    {{ level.name }}
+                                </div>
+                                <div class="card-body">
+                                    <div v-if="level.isUnlocked">
+                                        <p v-if="level.bestScore !== null">Best Score : {{ level.bestScore }}</p>
+                                        <p>Win : {{ level.totalWin }}</p>
+                                        <p>Lose : {{ level.totalLose }}</p>
+                                        <p>Give up : {{ level.totalGiveUp }}</p>
+                                        <button  class="btn btn-primary mt-4" @click="start(level.value)">Play</button>
+                                    </div>
+
+                                    <div class="d-flex justify-content-center align-items-center pt-5" v-else>
+                                        <span class="d-block"
+                                              :class="{'fa fa-lock-open' : level.isUnlocked, 'fa fa-lock' : !level.isUnlocked}"
+                                              style="font-size: 80px;"
+                                        >
+                                        </span>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div v-else>
+                        <h1 class="text-center">{{ levels[level - 1].name }}</h1>
+                        <div class="row mt-4">
+                            <div class="col-sm-6">
+                                <p class="text-center">{{ player.name }}</p>
+                                <div class="progress m-auto w-75 font-weight-bold" style="height: 2rem !important;background-color: #c6c7c9;">
+                                    <div class="progress-bar bg-success" role="progressbar" :style="{width: player.health + '%'}"
+                                         aria-valuemin="0" aria-valuemax="100">
+                                        {{ player.health }} pts / 100 pts
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <p class="text-center">MONSTER</p>
+                                <div class="progress m-auto w-75 font-weight-bold" style="height: 2rem !important;background-color: #c6c7c9;">
+                                    <div class="progress-bar bg-danger" role="progressbar" :style="{width: monsterHealth + '%'}"
+                                         aria-valuemin="0" aria-valuemax="100">
+                                        {{ monsterHealth }} pts / 100 pts
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="text-center actions-content">
+                            <div class="progress m-auto w-75 font-weight-bold" style="height: 2rem !important;background-color: #c6c7c9;">
+                                <div class="progress-bar bg-default progressbar-play" role="progressbar" :style="{width: (party.timeToPlay * 100) / party.timeTotal + '%'}"
+                                     aria-valuemin="0" aria-valuemax="100">
+                                    {{ party.timeToPlay }} s
+                                </div>
+                            </div>
+
+                            <div class="mt-3">
+                                <button @click="attackSimple" class="btn btn-danger">Attack</button>
+                                <button @click="specialAttack" class="btn btn-warning">Special Attack</button>
+                                <button @click="health" class="btn btn-success">Health</button>
+                                <button @click="giveUp" class="btn btn-secondary">Give up</button>
+                            </div>
+                        </div>
+
+                        <div class="w-75 m-auto" style="max-height: 300px;overflow-x: auto;">
+                            <div v-for="log in logs">
+                                <div class="alert " :class="{'alert-danger': !log.isPlayer, 'alert-success': log.isPlayer}" role="alert">
+                                    {{log.message}}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <script type="text/javascript">
+            new Vue({
+                el : '#app',
+                data : {
+                    party : {
+                        timeTotal : 10,
+                        timeToPlay : 10,
+                        playerMustPlay : true,
+                        monsterMustPlay : false,
+                        interval : null,
+                    },
+                    isRunning: false,
+                    monsterHealth : 100,
+                    logs : [],
+                    player : {
+                        name : "Player",
+                        level : 1,
+                        health: 100,
+                        minAttack: 3,
+                        maxAttack: 10,
+                        minAttackSpecial: 5,
+                        maxAttackSpecial: 13,
+                        points: 0,
+                    },
+                    levelsPlayer : [{level : 1, pointsNextLevel: 100}],
+                    level : 1,
+                    levels : [
+                        {
+                            name : "Debutant",
+                            minAttackMonster : 0,
+                            maxAttackMonster : 10,
+                            isUnlocked : true,
+                            value : 1,
+                            bestScore : null,
+                            totalWin : 0,
+                            totalLose : 0,
+                            totalGiveUp : 0,
+                        },
+                        {
+                            name : "Intermediaire",
+                            minAttackMonster : 5,
+                            maxAttackMonster : 15,
+                            isUnlocked : false,
+                            value : 2,
+                            bestScore : null,
+                            totalWin : 0,
+                            totalLose : 0,
+                            totalGiveUp : 0,
+                        },
+                        {
+                            name : "Expert",
+                            minAttackMonster : 10,
+                            maxAttackMonster : 20,
+                            isUnlocked : false,
+                            value : 3,
+                            bestScore : null,
+                            totalWin : 0,
+                            totalLose : 0,
+                            totalGiveUp : 0,
+                        },
+                    ],
+                    minAttackMonster: 0,
+                    maxAttackMonster: 10,
+                    page : 1,
+                    coups : 0
+                },
+                watch : {
+                    level : function(value) {
+                        this.minAttackMonster = this.levels[value - 1].minAttackMonster;
+                        this.maxAttackMonster = this.levels[value - 1].maxAttackMonster;
+                    },
+                    party : function(valueParty){
+                        var vm = this;
+                        console.log(valueParty);
+                        if(valueParty.timeToPlay <= 0){
+                            vm.party.playerMustPlay = false;
+                            vm.party.monsterMustPlay = true;
+                        }
+                    },
+                    playerHealth : function(value){
+                        this.checkWin();
+                    },
+                    monsterHealth : function(value){
+                        this.checkWin();
+                    }
+                },
+                mounted : function(){
+                    this.initLevelsPlayer();
+                },
+                methods : {
+                    startTimer : function(){
+                        this.party.playerMustPlay = true;
+                        this.party.timeToPlay = 10;
+
+                        var vm = this;
+                        clearInterval(vm.party.interval);
+                        this.party.interval = setInterval(function(){
+                            if(vm.party.timeToPlay > 0){
+                                vm.party.timeToPlay--;
+                            } else {
+                                clearInterval(vm.party.interval);
+                                vm.stopTimer();
+                            }
+                        }, 1000);
+                    },
+                    stopTimer : function(){
+                        this.party.playerMustPlay = false;
+                        this.party.monsterMustPlay = true;
+                        this.party.timeToPlay = 10;
+                    },
+                    resetParty : function(isRunning){
+                        this.logs = [];
+                        this.player.health = 100;
+                        this.monsterHealth = 100;
+                        this.coups = 0;
+                        this.isRunning = isRunning;
+                        this.startTimer();
+                    },
+                    start : function(level){
+                        this.level = level;
+                        this.resetParty(true);
+                    },
+                    initLevelsPlayer : function(){
+                        for(var i = 1; i < 100; i++){
+                            this.levelsPlayer.push({level : i, pointsNextLevel : this.levelsPlayer[i - 1].pointsNextLevel + 100})
+                        }
+                    },
+                    attackSimple : function(min, max){
+                        this.attack(this.player.minAttack, this.player.maxAttack);
+                    },
+                    attack : function(min, max){
+                        this.stopTimer();
+
+                        if(!this.checkWin()){
+                            var damage = this.calculateDammage(min, max);
+                            var oldMonsterHealth = this.monsterHealth;
+                            this.monsterHealth - damage > 0
+                                ? this.monsterHealth -= damage
+                                : this.monsterHealth = 0;
+                            this.coups++;
+                            this.logPlayer(oldMonsterHealth, damage);
+                            if(this.checkWin()){
+                                return false;
+                            } else {
+                                this.attackMonster();
+                            }
+                        }
+                    },
+                    attackMonster : function(){
+                        var damage = this.calculateDammage(this.minAttackMonster, this.maxAttackMonster);
+                        var oldPlayerHealth = this.player.health;
+                        this.player.health - damage > 0
+                        ? this.player.health -= damage
+                        : this.player.health = 0;
+                        this.logMonster(oldPlayerHealth, damage);
+                        this.startTimer();
+                        this.checkWin();
+                    },
+                    specialAttack : function(){
+                        this.attack(10, 20);
+                    },
+                    health : function(){
+                        this.stopTimer();
+
+                        if(this.player.health < 100){
+                            var oldPlayerHealth = this.player.health;
+                            this.player.health + 10 > 100
+                                ? this.player.health = 100 :
+                                this.player.health += 10;
+                            this.log(true, "Player heal (" + oldPlayerHealth + "pts -> " + this.playerHealth + "pts)");
+                        }
+                        this.attackMonster();
+                    },
+                    giveUp : function(){
+                        if(confirm("Give up ?")){
+                            this.stopTimer();
+                            this.levels[this.level - 1].totalGiveUp++;
+                            this.log(true, "Player give Up");
+                            this.resetParty(false);
+                        }
+                    },
+                    logPlayer : function(oldMonsterHealth, damage){
+                        this.log(true, this.player.name + " hurt Monster : "+ damage + "pts. ("+ oldMonsterHealth + "pts ->" + this.monsterHealth + "pts)");
+                    },
+                    logMonster : function(oldPlayerHealth, damage){
+                        this.log(false, "Monster hurt "+ this.player.name + ": " + damage + "pts. (" + oldPlayerHealth + "pts ->" + this.player.health+ "pts)");
+                    },
+                    log : function(isPlayer, message){
+                        var log = {isPlayer : isPlayer, message : message};
+                        this.logs.unshift(log);
+                    },
+                    calculateDammage : function(min, max){
+                        return Math.floor(Math.random()*(max-min+1)+min);
+                    },
+                    setBestScore : function(){
+                        if(this.levels[this.level - 1].bestScore == null ||this.levels[this.level - 1].bestScore > this.coups){
+                            this.levels[this.level - 1].bestScore = this.coups;
+                        }
+                    },
+                    nextLevel : function(){
+                        if(this.level in this.levels){
+                            this.levels[this.level].isUnlocked = true;
+                            if(confirm("You won ! Next level ?")){
+                                this.start(this.level + 1);
+                                return true;
+                            } else {
+                                this.resetParty(false);
+                                return true;
+                            }
+                        } else {
+                            alert("You won ! Game finish !");
+                            this.resetParty(false);
+                            return true;
+                        }
+                    },
+                    tryAgain : function(){
+                        if(confirm("You lose ! Restart ?")){
+                            this.start(this.level);
+                            return false;
+                        } else {
+                            this.resetParty(false);
+                            return false;
+                        }
+                    },
+                    checkPlayerNextLevel : function(){
+                        if(this.player.points >= this.levelsPlayer[this.player.level - 1].pointsNextLevel){
+                            this.player.level++;
+                            this.player.minAttack += 5;
+                            this.player.maxAttack += 5;
+                            this.player.maxAttackSpecial += 6;
+                            this.player.maxAttackSpecial += 6;
+                            this.player.health += 10;
+                            alert('Bravo, vous avez atteint le level ' + this.player.level + "!");
+                        }
+                    },
+                    checkWin : function(){
+                        if(this.monsterHealth <=0){ // WIN
+                            this.levels[this.level - 1].totalWin++;
+                            this.setBestScore();
+                            this.player.points += 30;
+                            this.checkPlayerNextLevel();
+                            return this.nextLevel();
+                        }else if(this.player.health <=0){ // LOSE
+                            this.player.points += 3;
+                            this.checkPlayerNextLevel();
+                            this.levels[this.level - 1].totalLose++;
+                            return this.tryAgain();
+                        }
+                    }
+                }
+            });
+        </script>
+    </body>
+</html>
